@@ -29,8 +29,7 @@ def add_time(actual_prospector, phone_numbers, mongo_config):
             trial_client = loop.run_until_complete(mongo.find_one("clients", {"client": phone}))
             
             if verify_client(trial_client, phone_number):
-                input("Pressione ENTER para sair")
-                return
+                continue
 
             client_name = trial_client.get('info', {}).get('name', '')
             input_response = True
@@ -49,28 +48,14 @@ def add_time(actual_prospector, phone_numbers, mongo_config):
                 new_trial_time = NEW_TRIAL_TIME_DEV
 
             else:
-                valid_input = False
-                while not valid_input:
-                    new_trial_time = inquirerpy.ask_text("Favor informe o tempo de trial (em dias):")
-
-                    try:
-                        new_trial_time = int(new_trial_time)
-
-                        if new_trial_time <= 0:
-                            logging.error("Entrada inválida. Por favor, informe um número inteiro positivo.")
-                            continue
-                        
-                        valid_input = True
-
-                    except ValueError:
-                        logging.error("Entrada inválida. Por favor, informe um número inteiro.")
+                new_trial_time = inquirerpy.ask_number("Favor informe o tempo de trial (em dias):", min=1)
 
             delta_days = (new_trial_time - trial_time)
             
             new_trial_date = datetime.now() + timedelta(days=delta_days)
 
             query = {"client": phone}
-            update = {"$set": {"purchase.start_trial": new_trial_date, "purchase.use_limit": 30}}
+            update = {"$set": {"purchase.start_trial": new_trial_date, "purchase.use_limit": 50}}
             loop.run_until_complete(mongo.update_one("clients", query, update))
 
             logging.info(

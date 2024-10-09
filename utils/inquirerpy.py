@@ -122,7 +122,8 @@ def ask_number(message, min):
             'message': message,
             'name': 'number',
             'min_allowed': min,
-            'validate': EmptyInputValidator(message="Número inválido. Tente novamente."),
+            'default': None,
+            'validate': EmptyInputValidator(message="Entrada inválida. Por favor, informe um número inteiro positivo."),
         }
     ]
 
