@@ -48,7 +48,7 @@ def add_time(actual_prospector, phone_numbers, mongo_config):
                 new_trial_time = NEW_TRIAL_TIME_DEV
 
             else:
-                new_trial_time = inquirerpy.ask_number("Favor informe o tempo de trial (em dias):", min=1)
+                new_trial_time = inquirerpy.ask_number(f"Favor informe o tempo de trial de {phone_number}(em dias):", min=1)
 
             delta_days = (new_trial_time - trial_time)
             
@@ -145,6 +145,11 @@ def get_phones(PHONE_NUMBERS_DEV):
                 if phone_number_response in phone_numbers:
                     logging.warning("Telefone já informado")
                     continue
+                
+                if len(phone_number_response) < 12:
+                    logging.warning("Telefone inválido. Por favor, informe um telefone correto")
+                    continue
+
                 if phone_number_response == "":
                     break
 
