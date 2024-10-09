@@ -22,6 +22,7 @@ def add_time(actual_prospector, phone_numbers, mongo_config):
     loop = asyncio.get_event_loop()
 
     logging.info(phone_numbers)
+    
     for phone_number in phone_numbers:
         phone = re.sub("\D", "", phone_number)
 
@@ -32,23 +33,31 @@ def add_time(actual_prospector, phone_numbers, mongo_config):
                 continue
 
             client_name = trial_client.get('info', {}).get('name', '')
-            input_response = True
 
             client_add_trial_mongo_data = loop.run_until_complete(mongo.find_one("add_free_trial", {"client": phone}))
             if client_add_trial_mongo_data:
-                logging.info(f"Cliente {client_name} já ganhou o trial dia {datetime.strptime(client_add_trial_mongo_data['added_date'], '%Y-%m-%d').strftime('%d/%m/%Y')}, adicionado por {actual_prospector}.")
-                input_response = inquirerpy.ask_list("Deseja atualizar novamente?", ["Sim", "Não"])
+                trial_info = client_add_trial_mongo_data.get('trial_info', [])
+                if trial_info:
+                    input_response = "Sim"
+                    last_trial_entry = trial_info[-1]
+                    last_trial = last_trial_entry.get('added_date')
+                    last_trial_by = last_trial_entry.get('added_by', 'N/A')
 
-            if input_response == "Não":
-                logging.info('Trial não atualizado')
-                continue
+                    logging.info(
+                        f"Cliente {client_name} já ganhou o trial dia {last_trial.strftime('%d/%m/%Y')}, adicionado por {last_trial_by}."
+                    )
+                    input_response = inquirerpy.ask_list("Deseja atualizar novamente?", ["Sim", "Não"])
 
+                    if input_response == "Não":
+                        logging.info('Trial não atualizado')
+                        continue
+            
             trial_time = mongo_config.get("trial_time", 6)
             if DEV_MODE:
                 new_trial_time = NEW_TRIAL_TIME_DEV
 
             else:
-                new_trial_time = inquirerpy.ask_number(f"Favor informe o tempo de trial de {phone_number}(em dias):", min=1)
+                new_trial_time = inquirerpy.ask_number(f"Favor informe o tempo de trial de {phone_number} (em dias):", min=1)
 
             delta_days = (new_trial_time - trial_time)
             
@@ -59,22 +68,33 @@ def add_time(actual_prospector, phone_numbers, mongo_config):
             loop.run_until_complete(mongo.update_one("clients", query, update))
 
             logging.info(
-                f"Trial do cliente {client_name} atualizado para {datetime.strftime((new_trial_date + timedelta(days=7)), '%d/%m/%Y')}"
+                f"Trial do cliente {client_name} atualizado para {(new_trial_date + timedelta(days=7)).strftime('%d/%m/%Y')}"
             )
 
-            loop.run_until_complete(
-                mongo.insert_one(
-                    "add_free_trial", 
-                    {
-                        "client": phone,
-                        "added_date": datetime.now(),
-                        "added_by": actual_prospector
-                    }
+            new_trial_entry = {
+                "added_date": datetime.now(),
+                "added_by": actual_prospector
+            }
+            if client_add_trial_mongo_data:
+                loop.run_until_complete(
+                    mongo.update_one(
+                        "add_free_trial", 
+                        {"client": phone}, 
+                        {"$push": {"trial_info": new_trial_entry}}    
+                    )
                 )
-            )
-            input("Pressione ENTER para sair")
-            return
 
+            else:
+                loop.run_until_complete(
+                    mongo.insert_one(
+                        "add_free_trial", 
+                        {
+                            "client": phone,
+                            "trial_info": [new_trial_entry]
+                        }
+                    )
+                )
+            
         except Exception as e:
             logging.error("Erro ao atualizar trial: %s", e)
         
@@ -142,6 +162,9 @@ def get_phones(PHONE_NUMBERS_DEV):
             try:
                 phone_number_response = inquirerpy.ask_text("Por favor, digite o telefone que deseja atualizar o trial. (Deixe em branco para encerrar)")
                 
+                if phone_number_response == "":
+                    break
+
                 if phone_number_response in phone_numbers:
                     logging.warning("Telefone já informado")
                     continue
@@ -149,9 +172,6 @@ def get_phones(PHONE_NUMBERS_DEV):
                 if len(phone_number_response) < 12:
                     logging.warning("Telefone inválido. Por favor, informe um telefone correto")
                     continue
-
-                if phone_number_response == "":
-                    break
 
                 phone_numbers.append(phone_number_response)
             
@@ -195,11 +215,11 @@ def main():
 
     except Exception as e:
         logging.critical("Ocorreu um erro crítico: %s", e)
-        input("Pressione ENTER para sair")
     
     finally:
         loop.close()
         logging.info("Conexão encerrada")
+        input("Pressione ENTER para sair")
 
 if __name__ == "__main__":
     main()
