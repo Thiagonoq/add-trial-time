@@ -6,9 +6,9 @@ import config
 import logging
 
 DEV = config.DEV_MODE
-uri = config.MONGODB_URI if not DEV else "mongodb://localhost:27017"
+# uri = config.MONGODB_URI if not DEV else "mongodb://localhost:27017"
+uri = config.MONGODB_URI
 DB_NAME = config.MONGODB_NAME
-
 
 class MongoDB:
 

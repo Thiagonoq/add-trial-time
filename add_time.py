@@ -21,6 +21,7 @@ NEW_TRIAL_TIME_DEV = 6
 def add_time(actual_prospector, phone_numbers, mongo_config):
     loop = asyncio.get_event_loop()
 
+    logging.info(phone_numbers)
     for phone_number in phone_numbers:
         phone = re.sub("\D", "", phone_number)
 
@@ -147,7 +148,7 @@ def login(allowed_prospectors):
 def get_phones(PHONE_NUMBERS_DEV):
     if DEV_MODE:
         phone_numbers = PHONE_NUMBERS_DEV
-        
+
     else:
         has_number = True
         phone_numbers = []
