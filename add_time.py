@@ -199,7 +199,8 @@ def main():
     try:
         mongo_config = loop.run_until_complete(mongo.find_one("config", {}))
         if not DEV_MODE:
-            allowed_prospectors = {prospector["name"].replace(" - Video AI", ""): prospector["id"] for prospector in mongo_config.get("agendor_allowed_users", [])}
+            sellers = loop.run_until_complete(mongo.find("sellers", {}))
+            allowed_prospectors = {prospector["name"].replace(" - Video AI", ""): prospector["id"] for prospector in sellers}
             actual_prospector = login(allowed_prospectors)
 
         else:
